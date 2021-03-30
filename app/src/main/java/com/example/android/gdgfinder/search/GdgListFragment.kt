@@ -13,6 +13,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.example.android.gdgfinder.databinding.FragmentGdgListBinding
 import com.google.android.gms.location.*
+import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 
 private const val LOCATION_PERMISSION_REQUEST = 1
@@ -31,7 +32,7 @@ class GdgListFragment : Fragment() {
         val binding = FragmentGdgListBinding.inflate(inflater)
 
         // Allows Data Binding to Observe LiveData with the lifecycle of this Fragment
-        binding.setLifecycleOwner(this)
+        binding.lifecycleOwner = this
 
         // Giving the binding access to the OverviewViewModel
         binding.viewModel = viewModel
@@ -40,6 +41,7 @@ class GdgListFragment : Fragment() {
             val destination = Uri.parse(chapter.website)
             startActivity(Intent(Intent.ACTION_VIEW, destination))
         })
+
 
         // Sets the adapter of the RecyclerView
         binding.gdgChapterList.adapter = adapter
@@ -53,6 +55,34 @@ class GdgListFragment : Fragment() {
                         "No location. Enable location in settings (hint: test with Maps) then check app permissions!",
                         Snackbar.LENGTH_LONG
                     ).show()
+                }
+            }
+        })
+
+        viewModel.regionList.observe(viewLifecycleOwner, object : Observer<List<String>> {
+            override fun onChanged(data: List<String>?) {
+                data ?: return
+
+                // Make a new Chip View for each item in the list
+                val chipGroup = binding.regionList
+                val inflator = LayoutInflater.from(chipGroup.context)
+
+                val children = data.map { regionName ->
+                    val chip = inflator.inflate(com.example.android.gdgfinder.R.layout.region, chipGroup, false) as Chip
+                        chip.text = regionName
+                        chip.tag = regionName
+                        chip.setOnCheckedChangeListener { button, isChecked ->
+                            viewModel.onFilterChanged(button.tag as String, isChecked)
+                        }
+                    chip
+                }
+
+                // Remove any views already in the ChipGroup
+                chipGroup.removeAllViews()
+
+                // Add the new children to the ChipGroup
+                for (chip in children) {
+                    chipGroup.addView(chip)
                 }
             }
         })
